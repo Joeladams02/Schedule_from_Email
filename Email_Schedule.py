@@ -1,4 +1,4 @@
-import email.policy
+import pandas as pd
 import imaplib
 from datetime import datetime, timedelta
 import email
@@ -40,36 +40,27 @@ class EmailFetcher:
                 return
             with open('imap_numbers.txt', 'r') as file:
                 messages = file.read().split()
-            emails = []
+            emails = ()
             for num in messages:
                 status, data = imap.fetch(num, '(BODY[])')
                 if status == 'OK':
-                    email_message = email.message_from_bytes(data[0][1], policy = email.policy.default)
+                    email_message = email.message_from_bytes(data[0][1])
                     print(f"Email fetched: {email_message['subject']}")
                     date_sent = email_message['Date']
-                    emails.append([num, date_sent, email_message])
+                    emails.append((num, date_sent, email_message))
+
             imap.close()
             imap.logout()
             return emails
         
-    def extract_file(self, emails):
+    def read_excel(self, emails):
         """Take email list and extract the excel file attached to the latest email to be parsed"""
-        emails = sorted(emails, key = lambda x: x[1])
-        for item in emails:
-            if item[2].iter_attachments():
-                for part in item[2].iter_attachments():
-                    filename = part.get_filename()
-                    if filename:
-                        with open("Schedule.xlsx", "wb") as file:
-                            file.write(part.get_payload(decode="True"))
-                        return True
-        else:
-            return False
+        
+
+
 
 email_fetcher = EmailFetcher(username="Joeladams02@icloud.com", 
                              password="vttg-qutv-cvxe-tkon", 
                              server="imap.mail.me.com")
 
-#email_fetcher.get_numbers()
-email_list = email_fetcher.fetch_emails()
-email_fetcher.read_excel(email_list)
+schedule_email = email_fetcher.fetch_emails()
