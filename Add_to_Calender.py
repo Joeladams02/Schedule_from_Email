@@ -22,7 +22,6 @@ dates = {}
 
 
 for months in months_array:
-    print(months)
 
     month_df = df_full[months].to_numpy()
     for row_index, row in enumerate(month_df):
