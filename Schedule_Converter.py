@@ -3,7 +3,7 @@ from Read_from_Excel import ReadExcel
 from Create_Calendar import DatesToICS
  
 email_handler = EmailHandler(username="Joeladams02@icloud.com", 
-                             password="vttg-qutv-cvxe-tkon", 
+                             password=<-UNDICLOSED!!->, 
                              server="imap.mail.me.com")
 
 '''Login into my email and fetch excel file'''
