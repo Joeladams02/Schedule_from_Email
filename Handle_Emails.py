@@ -1,16 +1,18 @@
 import email.policy
 import imaplib
+import time
 from datetime import datetime, timedelta
 import email
+from email.message import EmailMessage
 
-class EmailFetcher:
+class EmailHandler:
     def __init__(self, username, password, server):
         self.username = username
         self.password = password
         self.server = server
+        self.emails = []
 
     def login(self, mailbox="INBOX"):
-        """Log in to the IMAP server."""
         try:
             imap = imaplib.IMAP4_SSL(self.server)
             imap.login(self.username, self.password)
@@ -21,37 +23,48 @@ class EmailFetcher:
             print(f"Authentication failed: {e}")
             return None
 
-    def get_numbers(self):
-        """Get email numbers with subject 'Schedule' from the last 24 hours."""
+    def fetch_emails(self):
         with self.login() as imap:
             if not imap:
                 return
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
             status, messages = imap.search(None, f'SINCE {yesterday} SUBJECT "Schedule"')
-            with open('imap_numbers.txt', 'wb') as file:
-                file.write(messages[0])
+            self.emails = messages[0].decode('utf-8').split()
+            print(self.emails)
+
+            emails = []
+            for UID in self.emails:
+                status, data = imap.fetch(str(UID), '(BODY[])')
+                if status == 'OK':
+                    email_message = email.message_from_bytes(data[0][1], policy = email.policy.default)
+                    date_sent = email_message['Date']
+                    emails.append([UID, date_sent, email_message]) 
             imap.close()
             imap.logout()
+        return emails
 
-    def fetch_emails(self):
-        """Fetch the email content for the email numbers stored in the text file."""
+    def send_email(self, file_path):
+        # Create the email message
+        msg = EmailMessage()
+        msg['Subject'] = 'Updated Calendar'
+        msg['From'] = self.username
+        msg['To'] = self.username
+        msg.set_content("Please find your updated calendar attached.")
+
+        # Attach the .ics file
+        with open(file_path, 'rb') as file:
+            file_data = file.read()
+            file_name = file_path.split("/")[-1]
+            msg.add_attachment(file_data, maintype='text', subtype='calendar', filename=file_name)
+
         with self.login() as imap:
             if not imap:
                 return
-            with open('imap_numbers.txt', 'r') as file:
-                messages = file.read().split()
-            emails = []
-            for num in messages:
-                status, data = imap.fetch(num, '(BODY[])')
-                if status == 'OK':
-                    email_message = email.message_from_bytes(data[0][1], policy = email.policy.default)
-                    print(f"Email fetched: {email_message['subject']}")
-                    date_sent = email_message['Date']
-                    emails.append([num, date_sent, email_message]) 
+            imap.append('INBOX', '',imaplib.Time2Internaldate(time.time()), str(msg).encode('utf-8'))
+
             imap.close()
             imap.logout()
-            return emails
-        
+      
     def save_excel(self, emails):
         emails = sorted(emails, key=lambda x: x[1])
         for email_message in emails:
@@ -62,4 +75,3 @@ class EmailFetcher:
                         attachment_data = part.get_payload(decode=True)
                         with open('Schedule.xlsx', 'wb') as f:
                             f.write(attachment_data)
-                        print(f"Saved attachment as {filename}")

@@ -1,7 +1,12 @@
 import pandas as pd
 from datetime import datetime
+import warnings
+22
+warnings.filterwarnings("ignore", message="Unknown extension is not supported and will be removed")
+warnings.filterwarnings("ignore", message="Print area cannot be set")
 
-class ScheduleProcessor:
+
+class ReadExcel:
     def __init__(self, excel_file):
         self.excel_file = excel_file
         self.months_array = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -18,16 +23,15 @@ class ScheduleProcessor:
         except IndexError:
             return None
 
-    def process_schedule(self):
+    def process_Excel(self):
         for month_name in self.months_array:
             month_df = self.df_full[month_name].to_numpy()
 
             for row_index, row in enumerate(month_df):
                 for column_index, item in enumerate(row):
-                    # Call the check_if_scheduled method for each item
                     scheduled_lesson = self.check_if_scheduled(item, month_df, row_index, column_index, month_name)
                     if scheduled_lesson is not None:
                         self.dates[item] = scheduled_lesson
 
     def get_scheduled_dates(self):
-        return self.dates
+        return {key: value for key, value in self.dates.items() if len(value) >= 5}
